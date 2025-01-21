@@ -6,22 +6,22 @@
 # 5. 不得用于任何非法或不当的用途。
 #   
 # 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
 
 
 import os
 
 # mysql config
-RELATION_DB_PWD = os.getenv("RELATION_DB_PWD", "123456")
-RELATION_DB_USER = os.getenv("RELATION_DB_USER", "root")
-RELATION_DB_HOST = os.getenv("RELATION_DB_HOST", "localhost")
-RELATION_DB_PORT = os.getenv("RELATION_DB_PORT", 3306)
-RELATION_DB_NAME = os.getenv("RELATION_DB_NAME", "media_crawler")
+RELATION_DB_PWD = os.getenv("RELATION_DB_PWD", "")
+RELATION_DB_USER = os.getenv("RELATION_DB_USER", "")
+RELATION_DB_HOST = os.getenv("RELATION_DB_HOST", "")
+RELATION_DB_PORT = os.getenv("RELATION_DB_PORT", 0)
+RELATION_DB_NAME = os.getenv("RELATION_DB_NAME", "")
 
 
 # redis config
 REDIS_DB_HOST = "127.0.0.1"  # your redis host
-REDIS_DB_PWD = os.getenv("REDIS_DB_PWD", "123456")  # your redis password
+REDIS_DB_PWD = os.getenv("REDIS_DB_PWD", "")  # your redis password
 REDIS_DB_PORT = os.getenv("REDIS_DB_PORT", 6379)  # your redis port
 REDIS_DB_NUM = os.getenv("REDIS_DB_NUM", 0)  # your redis db num
 

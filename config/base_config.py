@@ -8,14 +8,18 @@
 # 详细许可条款请参阅项目根目录下的LICENSE文件。
 # 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
 
+import asyncio
+import aiomysql
 
 # 基础配置
 PLATFORM = "xhs"
-KEYWORDS = "编程副业,编程兼职"  # 关键词搜索配置，以英文逗号分隔
-LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
+
+# KEYWORDS = "Tiktok Refugee,Tiktok refugee, tiktok refugee,tt refugee,TT Refugee,TT refugee,TikTok難民,TT難民,tt難民,TT难民,tiktok refugee,tt refugee,TT Refugee,TT refugee,Tiktok Refugee,Tiktok refugee"  # 关键词搜索配置，以英文逗号分隔
+KEYWORDS = "tiktok refugee,Tiktok refugee,tt refugee,TT Refugee,TT refugee,TikTok難民,TT難民,tt難民,TT难民,TikTok 难民,tiktok refugee,tt refugee,TT Refugee,TT refugee,Tiktok Refugee,Tiktok refugee"
+LOGIN_TYPE = "phone"  # qrcode or phone or cookie
 COOKIES = ""
 # 具体值参见media_platform.xxx.field下的枚举值，暂时只支持小红书
-SORT_TYPE = "popularity_descending"
+SORT_TYPE = "general"
 # 具体值参见media_platform.xxx.field下的枚举值，暂时只支持抖音
 PUBLISH_TIME_TYPE = 0
 CRAWLER_TYPE = (
@@ -46,7 +50,7 @@ HEADLESS = False
 SAVE_LOGIN_STATE = True
 
 # 数据保存类型选项配置,支持三种类型：csv、db、json, 最好保存到DB，有排重的功能。
-SAVE_DATA_OPTION = "json"  # csv or db or json
+SAVE_DATA_OPTION = "db"  # csv or db or json
 
 # 用户浏览器缓存的浏览器文件配置
 USER_DATA_DIR = "%s_user_data_dir"  # %s will be replaced by platform name
@@ -58,7 +62,7 @@ START_PAGE = 1
 CRAWLER_MAX_NOTES_COUNT = 200
 
 # 并发爬虫数量控制
-MAX_CONCURRENCY_NUM = 1
+MAX_CONCURRENCY_NUM = 2
 
 # 是否开启爬图片模式, 默认不开启爬图片
 ENABLE_GET_IMAGES = False
@@ -67,12 +71,12 @@ ENABLE_GET_IMAGES = False
 ENABLE_GET_COMMENTS = True
 
 # 爬取一级评论的数量控制(单视频/帖子)
-CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 10
+CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 1000
 
 
 # 是否开启爬二级评论模式, 默认不开启爬二级评论
 # 老版本项目使用了 db, 则需参考 schema/tables.sql line 287 增加表字段
-ENABLE_GET_SUB_COMMENTS = False
+ENABLE_GET_SUB_COMMENTS = True
 
 # 已废弃⚠️⚠️⚠️指定小红书需要爬虫的笔记ID列表
 # 已废弃⚠️⚠️⚠️ 指定笔记ID笔记列表会因为缺少xsec_token和xsec_source参数导致爬取失败
@@ -131,11 +135,85 @@ TIEBA_CREATOR_URL_LIST = [
     # ........................
 ]
 
+XHS_CREATOR_ID_LIST = []
 # 指定小红书创作者ID列表
-XHS_CREATOR_ID_LIST = [
-    "63e36c9a000000002703502b",
-    # ........................
-]
+# XHS_CREATOR_ID_LIST = [
+#     "63e36c9a000000002703502b",
+#     # ........................
+# ]
+
+# 异步查询函数
+async def fetch_data():
+    global XHS_CREATOR_ID_LIST
+    # 数据库连接配置
+    config = {
+        'host': "",        # 替换为你的 MySQL 主机地址
+        'port': 0,
+        'user': "",        # 替换为你的 MySQL 用户名
+        'password': "",# 替换为你的 MySQL 密码
+        'db': "",       # 替换为你的 MySQL 数据库名
+        'charset': 'utf8mb4',             # 确保支持 Unicode 字符
+        'autocommit': True
+    }
+
+
+    # SQL 查询
+    query = """
+    SELECT t1.user_id
+FROM
+(
+    SELECT DISTINCT user_id
+    FROM xhs_note_comment
+    WHERE ip_location = '美国'
+    AND nickname != 'momo'
+    AND nickname REGEXP '^[A-Za-z[:punct:] ]+$'  -- Nickname contains only English letters, punctuation, and spaces
+    AND nickname NOT REGEXP '[一-龯]'  -- Excludes Chinese characters from nickname (characters from the CJK Unified Ideographs range)
+    AND content REGEXP '^[A-Za-z[:punct:] ]+$'  -- Content contains only English letters, punctuation, and spaces
+    AND content NOT REGEXP '[一-龯]'  -- Excludes Chinese characters from content
+) t1
+LEFT JOIN
+(
+    SELECT DISTINCT user_id
+    FROM xhs_creator
+) t2
+ON t1.user_id = t2.user_id
+WHERE t2.user_id IS NULL;
+    """
+
+    # 结果存储列表
+    result_list = []
+    pool = None
+    # 异步连接到数据库并执行查询
+    try:
+        # 创建连接池
+        pool = await aiomysql.create_pool(**config)
+        async with pool.acquire() as connection:
+            async with connection.cursor() as cursor:
+                # 执行查询
+                await cursor.execute(query)
+                results = await cursor.fetchall()
+
+                # 将查询结果存储到列表
+                XHS_CREATOR_ID_LIST = [row[0] for row in results]
+
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        if pool:
+            # 确保连接池关闭
+            pool.close()
+            await pool.wait_closed()
+
+    # 返回结果列表
+    return result_list
+
+# 主函数
+async def fetch_usr():
+    # 获取查询结果
+    await fetch_data()
+
+# 运行异步主函数
+asyncio.run(fetch_usr())
 
 # 指定Dy创作者ID列表(sec_id)
 DY_CREATOR_ID_LIST = [

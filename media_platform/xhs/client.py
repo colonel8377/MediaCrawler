@@ -115,6 +115,7 @@ class XiaoHongShuClient(AbstractApiClient):
         elif data["code"] == self.IP_ERROR_CODE:
             raise IPBlockError(self.IP_ERROR_STR)
         else:
+            utils.logger.error(f"[XiaoHongShuClient.request] {data if data else 'null'}")
             raise DataFetchError(data.get("msg", None))
 
     async def get(self, uri: str, params=None) -> Dict:
@@ -286,7 +287,10 @@ class XiaoHongShuClient(AbstractApiClient):
             "image_formats": "jpg,webp,avif",
             "xsec_token": xsec_token,
         }
-        return await self.get(uri, params)
+        try:
+            return await self.get(uri, params)
+        except Exception as e:
+            return None
 
     async def get_note_sub_comments(
         self,
@@ -346,6 +350,8 @@ class XiaoHongShuClient(AbstractApiClient):
             comments_res = await self.get_note_comments(
                 note_id=note_id, xsec_token=xsec_token, cursor=comments_cursor
             )
+            if not comments_res:
+                break
             comments_has_more = comments_res.get("has_more", False)
             comments_cursor = comments_res.get("cursor", "")
             if "comments" not in comments_res:
@@ -496,7 +502,7 @@ class XiaoHongShuClient(AbstractApiClient):
             notes_res = await self.get_notes_by_creator(user_id, notes_cursor)
             if not notes_res:
                 utils.logger.error(
-                    f"[XiaoHongShuClient.get_notes_by_creator] The current creator may have been banned by xhs, so they cannot access the data."
+                    f"[XiaoHongShuClient.get_notes_by_creator] The current creator {user_id} may have been banned by xhs, so they cannot access the data."
                 )
                 break
 
