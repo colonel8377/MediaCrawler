@@ -187,7 +187,9 @@ LEFT JOIN
     FROM xhs_creator
 ) t2
 ON t1.user_id = t2.user_id
-WHERE t2.user_id IS NULL;
+WHERE t2.user_id IS NULL
+order by t1.user_id desc
+;
     """
 
     # 结果存储列表
