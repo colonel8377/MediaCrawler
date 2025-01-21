@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Union
 
 import aiomysql
 
+from tools.utils import logger
+
 
 class AsyncMysqlDB:
     def __init__(self, pool: aiomysql.Pool) -> None:
@@ -79,20 +81,24 @@ class AsyncMysqlDB:
         """
         upsets = []
         values = []
+        # Build the SET clause and collect values for the query
         for k, v in updates.items():
-            s = '`%s`=%%s' % k
-            upsets.append(s)
+            upsets.append(f"`{k}`=%s")
             values.append(v)
-        upsets = ','.join(upsets)
-        sql = 'UPDATE %s SET %s WHERE %s="%s"' % (
-            table_name,
-            upsets,
-            field_where, value_where,
-        )
-        async with self.__pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                rows = await cur.execute(sql, values)
-                return rows
+
+        upsets = ', '.join(upsets)
+        sql = f"UPDATE `{table_name}` SET {upsets} WHERE `{field_where}`=%s"
+        values.append(value_where)  # Add the value for the WHERE clause
+
+        try:
+            async with self.__pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    rows = await cur.execute(sql, values)
+                    await conn.commit()  # Commit the changes
+                    return rows
+        except Exception as e:
+            logger.exception(f"Error executing SQL: {sql} with values {values}")
+            raise e
 
     async def execute(self, sql: str, *args: Union[str, int]) -> int:
         """
